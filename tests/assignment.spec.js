@@ -1,8 +1,38 @@
 import { test, expect } from '@playwright/test';
-import { parseISO, differenceInDays } from 'date-fns';
+import { parseISO, differenceInDays, intervalToDuration } from 'date-fns';
+
+// removed this function in CTO Round
+// function format(days){
+//     const years = Math.floor(days/365);
+//     days %= 365;
+//     const months = Math.floor(days/30);
+//     days %= 30;
+
+//     const p = [
+//     `${years} year${years>1 ? 's':''}`,
+//     `${months} month${months>1 ? 's':''}`,
+//     `${days} day${days>1 ? 's':''}`
+// ];
+//     return p.join(' ');
+// }
+
+// Created this new function in same round to calculate dates for leap years too
+function calcDates(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const dur = intervalToDuration({ end, start });
+    return `${dur.years} years ${dur.months} months ${dur.days} days`
+
+}
+
+// to generate
+function generateWords(count = 200) {
+    const words = ['alpha', 'beta', 'delta', 'pharma', 'research', 'trial', 'med', 'drug', 'vaccine', 'bio'];
+    return Array.from({ length: count }, () => words[Math.floor(Math.random() * words.length)]).join(' ');
+}
 
 test('Extract patent dates and compute differences', async ({ page }) => {
-    const searchTerm = process.env.SEARCH_KEY || 'paracetamol';
+    const searchTerm = process.env.SEARCH_KEY || generateWords(300);
 
     // Navigate to the app
     await page.goto("https://patinformed.wipo.int/", { waitUntil: "domcontentloaded" });
@@ -22,7 +52,7 @@ test('Extract patent dates and compute differences', async ({ page }) => {
 
     // Waits for results table
     const resultsTable = page.locator("table.results");
-    await resultsTable.waitFor({ timeout: 10000 }).catch(() => {});
+    await resultsTable.waitFor({ timeout: 10000 }).catch(() => { });
 
     // Check if results are available
     const resultRows = resultsTable.locator("tbody tr");
@@ -35,7 +65,7 @@ test('Extract patent dates and compute differences', async ({ page }) => {
 
     console.log(`Found ${rowCount} result(s) for "${searchTerm}". Opening the first result...`);
     await resultRows.first().click();
- 
+
     // Wait for details to load
     const detailSections = page.locator(".patentDetails.noBorder");
     await detailSections.first().waitFor({ timeout: 10000 });
@@ -79,13 +109,16 @@ test('Extract patent dates and compute differences', async ({ page }) => {
 
     console.log("\nDate Differences:");
     if (publicationDate && grantDate) {
-        console.log(`Difference between Publication and Grant date: ${Math.abs(differenceInDays(publicationDate, grantDate))} days`);
+        // console.log(`Difference between Publication and Grant date: ${format(Math.abs(differenceInDays(publicationDate, grantDate)))} `);
+        console.log(`Difference between Publication and Grant date: ${calcDates(publicationDateStr, grantDateStr)} `);
     }
     if (publicationDate && filingDate) {
-        console.log(`Difference between Publication and Filing date: ${Math.abs(differenceInDays(publicationDate, filingDate))} days`);
+        // console.log(`Difference between Publication and Filing date: ${format(Math.abs(differenceInDays(publicationDate, filingDate)))} `);
+        console.log(`Difference between Filing and Publication date: ${calcDates(filingDateStr, publicationDateStr)} `);
     }
     if (grantDate && filingDate) {
-        console.log(`Difference between Grant and Filing date: ${Math.abs(differenceInDays(grantDate, filingDate))} days`);
+        // console.log(`Difference between Grant and Filing date: ${format(Math.abs(differenceInDays(grantDate, filingDate)))} `);
+        console.log(`Difference between Filing and Grant date: ${calcDates(filingDateStr, grantDateStr)} `);
     }
 
     // Ensure at least any one date is available
